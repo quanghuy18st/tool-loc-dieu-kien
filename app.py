@@ -1,4 +1,7 @@
+
 import re
+import subprocess
+import sys
 from datetime import datetime
 
 import streamlit as st
@@ -21,6 +24,22 @@ st.caption(
     "Nhập username và 6 số cuối trên cùng một dòng. Tool kiểm tra một tài khoản "
     "mỗi lần và dừng ngay sau khi đọc thông báo xác minh."
 )
+
+
+# CÀI CHROMIUM CHO STREAMLIT CLOUD
+@st.cache_resource
+def install_chromium():
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "playwright",
+            "install",
+            "chromium"
+        ],
+        check=True,
+        timeout=300
+    )
 
 
 def classify_result(message: str) -> str:
@@ -162,8 +181,13 @@ def submit_and_read(page):
 
 
 def check_one_account(username, bank_tail):
+    # Cài Chromium trước khi khởi chạy trình duyệt
+    install_chromium()
+
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=False)
+        # Cloud không có giao diện đồ họa nên phải bật headless
+        browser = playwright.chromium.launch(headless=True)
+
         try:
             page = browser.new_page(viewport={"width": 1365, "height": 900})
             page.goto(URL, wait_until="domcontentloaded", timeout=60000)
@@ -176,6 +200,7 @@ def check_one_account(username, bank_tail):
             body_text = submit_and_read(page)
             status = classify_result(body_text)
             return status, body_text[-1800:]
+
         finally:
             browser.close()
 
